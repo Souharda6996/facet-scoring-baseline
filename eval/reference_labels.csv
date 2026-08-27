@@ -1,0 +1,21 @@
+conversation_id,facet_id,facet_name,expected_status,expected_score_band,rationale
+C01,F0000,Risktaking,scored,high,explicit repeated risk-seeking statements (solo unplanned trip; bungee/skydiving eagerness)
+C01,F0005,Hesitation,scored,low,explicitly says never thinks twice before saying yes
+C02,F0025,Openness,scored,mid,self-contradicting hedged statement; weak mixed evidence in both directions
+C02,F0363,Trust in others,insufficient_evidence,,no evidence about trust given anywhere in this conversation
+C03,F0363,Trust in others,insufficient_evidence,,statement directly self-contradicts within the same turn; no reliable direction can be read
+C04,F0000,Risktaking,scored,low,speaker explicitly attributes impulsiveness to their sister (quoted) and describes themself as a heavy planner -- the trait belongs to a third party, not the speaker
+C05,F0360,Irritability,scored,high,sarcastic opening claim of calmness is inverted by the literal described outburst (screamed, threw laptop)
+C06,F0360,Irritability,scored,high,clear frustration expressed in Hindi-English code-switched text about people being late
+C07,F0000,Risktaking,insufficient_evidence,,generic small talk with no behavioral or attitudinal content
+C07,F0144,Compassion,insufficient_evidence,,generic small talk with no behavioral or attitudinal content
+C07,F0360,Irritability,insufficient_evidence,,generic small talk with no behavioral or attitudinal content
+C08,F0394,793. Sufi practice: Dhikr repetitions / day,scored,high,explicit self-reported daily count (~200 repetitions nightly)
+C08,F0173,565. Practice frequency: Walking meditation,scored,mid-high,explicit daily routine self-report (20 minutes every morning)
+C09,F0366,Caffeine intake (mg/day),scored,mid-high,explicit numeric self-report (~400mg/day across three coffees + energy drinks)
+C09,F0326,Museum visits/year,scored,mid,vague monthly estimate ("every month or so"), weaker evidence than C09's caffeine claim but still a concrete self-report
+C10,F0031,FSH level,not_observable,,requires an actual lab test result; conversation only mentions an unspecified doctor comment about hormones, never a value -- must not be inferred
+C11,F0337,Sleep Apnea,not_observable,,clinical diagnosis requires formal medical evaluation (e.g. a sleep study); vivid symptom description is suggestive but self-report of symptoms is not a diagnosis
+C12,F0294,Intelligence Quotient (IQ),not_observable,,IQ requires standardized psychometric testing; sophisticated described behavior is not a valid basis for a numeric IQ inference
+C12,F0333,Cognitive measure: Working Memory Index,not_observable,,requires formal cognitive testing; same reasoning as IQ above
+C12,F0025,Openness,scored,high,clear evidence of intellectual curiosity and engagement with complex abstract ideas -- contrast case showing the personality trait IS scorable even though the adjacent cognitive-ability facet is not

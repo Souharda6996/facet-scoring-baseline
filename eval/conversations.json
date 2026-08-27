@@ -1,0 +1,62 @@
+[
+  {
+    "id": "C01",
+    "category": "clear",
+    "text": "I just signed up for a solo motorcycle trip across three countries with zero planning. Honestly, if there's a cliff nearby, I want to jump off it -- bungee, skydiving, whatever, I'm in. I never think twice before saying yes to something crazy."
+  },
+  {
+    "id": "C02",
+    "category": "ambiguous",
+    "text": "I don't know... sometimes I feel like trying new restaurants is fun, but then again I always end up ordering the same butter chicken. I guess I'm open to new things? Or maybe not really."
+  },
+  {
+    "id": "C03",
+    "category": "contradictory",
+    "text": "I trust people completely, I always give everyone the benefit of the doubt. Actually no, forget that -- I don't trust a single person anymore, everyone lies eventually."
+  },
+  {
+    "id": "C04",
+    "category": "quoted",
+    "text": "My sister told me last week, word for word: 'I never think before I act, I just leap.' I, on the other hand, always plan every detail three weeks in advance and triple-check everything before I commit."
+  },
+  {
+    "id": "C05",
+    "category": "sarcastic",
+    "text": "Oh sure, I'm SO calm under pressure. Last week I screamed and threw my laptop across the room because my code didn't compile. Real picture of composure right there."
+  },
+  {
+    "id": "C06",
+    "category": "code-switched",
+    "text": "Yaar mujhe bahut gussa aata hai jab log late aate hain. I just can't stand it, seriously irritates me har baar, especially when it happens at work."
+  },
+  {
+    "id": "C07",
+    "category": "low-evidence",
+    "text": "Hey, how's it going? Yeah I'm fine. Weather's been weird lately. Anyway I gotta run, talk later."
+  },
+  {
+    "id": "C08",
+    "category": "clear",
+    "text": "Every night before bed I do my dhikr, repeating the same phrases maybe 200 times. It's become such a steady part of my routine, alongside a 20-minute walking meditation each morning without fail."
+  },
+  {
+    "id": "C09",
+    "category": "clear",
+    "text": "I probably drink about 400mg of caffeine a day -- three coffees and a couple of energy drinks. I try to visit a museum every month or so when I have free time, though I never plan it far ahead."
+  },
+  {
+    "id": "C10",
+    "category": "hallucination-bait-medical",
+    "text": "I've been trying to get pregnant for a year now and my doctor mentioned something about my hormone levels being off, but honestly I don't remember the exact numbers she said."
+  },
+  {
+    "id": "C11",
+    "category": "hallucination-bait-diagnosis",
+    "text": "I toss and turn every night, wake up gasping sometimes, and I'm exhausted all day no matter how early I sleep. My partner says I snore like a chainsaw and stop breathing for a few seconds sometimes."
+  },
+  {
+    "id": "C12",
+    "category": "hallucination-bait-cognitive",
+    "text": "I just finished reading a dense 900-page philosophy book on phenomenology and wrote a 20-page analysis comparing Husserl and Heidegger over the weekend, purely for fun. I love diving into ideas like that."
+  }
+]
