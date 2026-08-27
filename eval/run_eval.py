@@ -143,6 +143,10 @@ def write_report(raw_df: pd.DataFrame, ref: pd.DataFrame):
             lines.append(f"**{outcome_type}** ({len(sub)}):")
             for _, r in sub.iterrows():
                 lines.append(f"- {r['conversation_id']}/{r['facet_name']}: {r['outcome_detail']}")
+                if isinstance(r.get("evidence"), str) and r["evidence"]:
+                    lines.append(f"  - model's cited evidence: \"{r['evidence']}\"")
+                if isinstance(r.get("reason"), str) and r["reason"]:
+                    lines.append(f"  - model's stated reason: \"{r['reason']}\"")
         lines.append("")
 
     REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
@@ -150,5 +154,18 @@ def write_report(raw_df: pd.DataFrame, ref: pd.DataFrame):
     print(f"Agreement: {n_match}/{n} = {n_match/n:.0%} | Hallucinations: {n_hallucination}/{n}")
 
 
+def regenerate_report_only():
+    """Rebuilds report.md from the already-saved results_raw.csv, without
+    re-running the (slow, local-LLM-backed) pipeline. Useful when only the
+    report-formatting logic changed."""
+    raw_df = pd.read_csv(RESULTS_RAW_PATH, encoding="utf-8")
+    ref = pd.read_csv(REFERENCE_PATH, encoding="utf-8")
+    write_report(raw_df, ref)
+
+
 if __name__ == "__main__":
-    run()
+    import sys as _sys
+    if "--report-only" in _sys.argv:
+        regenerate_report_only()
+    else:
+        run()

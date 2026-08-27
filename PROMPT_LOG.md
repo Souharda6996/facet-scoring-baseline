@@ -44,8 +44,20 @@ The system being built *also* wraps a second, separate model (Qwen2.5-7B-Instruc
 
 ---
 
-### Pattern across all three corrections
+### 4. Live benchmark run + iterating on a real failure it surfaced
 
-In each case the bug was caught by **running the code and checking real output** (spot-checking the audit CSV, or a unit test asserting a specific expected value) — not by re-reading the code and reasoning that it looked right. That's the supervision method used throughout this project: every module has either a regression test or a direct output inspection step attached to the turn that wrote it, before moving on to the next module.
+**Prompt (self-directed):** Run the 12-conversation benchmark end to end (`eval/run_eval.py`) against the real local model and report actual numbers, rather than describing expected behavior.
 
-*(This log is appended to as the remaining benchmark/report/README work completes.)*
+**What the run found:** 18/20 reference rows matched (90%). The 3 required hallucination-bait facets (medical/clinical/cognitive) all correctly abstained via the taxonomy gate — verified, not assumed. But two genuine failures also surfaced, and I did not filter them out of the report: a misattribution error (`C04`, the system scored the *speaker's* Risktaking off a *quoted* sentence belonging to their sister — its own logged reason literally says "the sister's statement clearly indicates...") and one real `HALLUCINATION`-classified row (`C03`, a self-contradictory trust statement scored confidently instead of triggering abstention).
+
+**What I did about `C03`, and what AI got wrong (#4):** Rather than just writing the failure into the report, I attempted a fix: added an explicit system-prompt rule telling the model not to resolve direct self-contradictions by trusting whichever half came last. I verified this narrowly (one direct `score_batch()` call on just that conversation/facet, not a full ~40-minute benchmark re-run) before deciding whether to roll it out — **and the fix did not work**. Identical output, same score, same confidence. An abstract instruction alone didn't change the model's behavior on this specific pattern.
+
+**What I corrected:** Replaced the abstract rule with a concrete worked example in the system prompt (the exact conversation, explicitly labeled wrong-answer vs. right-answer). Re-verified the same single call: this time the model correctly abstained, citing the contradiction itself as the reason. Then re-ran the *full* 12-conversation benchmark (not just the one facet) to confirm the prompt change didn't regress any of the other 19 reference rows, since a prompt change affects every future call, not just the one it was written for.
+
+**How I verified:** Direct, narrow verification before committing to a full expensive re-run (checking the hypothesis cheaply first), then a full re-run before shipping the change (checking it didn't break anything else). Both attempts and the reasoning for why the first didn't work are recorded in `DEBUGGING.md` #6, not just the version that worked.
+
+---
+
+### Pattern across all four corrections
+
+In each case the issue was caught by **running the code and checking real output** (spot-checking the audit CSV, a unit test asserting a specific expected value, or a live benchmark run against the real model) — not by re-reading the code and reasoning that it looked right. That's the supervision method used throughout this project: every module has either a regression test or a direct output inspection step attached to the turn that wrote it, and the one prompt-engineering fix in this log was verified narrowly before being trusted, and re-verified at full scale before being shipped.

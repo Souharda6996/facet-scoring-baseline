@@ -73,3 +73,21 @@ Real issues hit during development, not hypothetical ones. Each entry: symptom -
 **Verification:** `pd.read_csv('eval/reference_labels.csv')` now parses cleanly (20/20 rows); re-launched `eval/run_eval.py`.
 
 ---
+
+## 6. Model resolves a self-contradictory statement by trusting whichever half came last, instead of abstaining
+
+**Symptom:** First full benchmark run (`eval/report.md`) flagged one `HALLUCINATION` outcome: `C03`, a conversation reading "I trust people completely, I always give everyone the benefit of the doubt. Actually no, forget that -- I don't trust a single person anymore, everyone lies eventually." Reference expectation was `insufficient_evidence` (the statement is directly self-contradictory with no resolution). The system instead returned `status=scored, score=1, confidence=0.95`, with its own logged reason: *"The speaker explicitly states a lack of trust in others"* -- reasoning entirely from the second half of the statement and silently discarding the first half's direct contradiction.
+
+**Diagnosis:** This is not a taxonomy-gate failure (`Trust in others` is correctly `conversation_observable=True` -- a contradictory personality statement is exactly the kind of thing the LLM, not a deterministic rule, has to judge). It's a prompt-following gap: nothing in `SYSTEM_PROMPT` (`src/score.py`) told the model that a *live, unresolved* contradiction should itself be read as ambiguity rather than resolved by recency.
+
+**Root cause:** Qwen2.5-7B defaulted to a recency heuristic ("the last thing said is the real stance") instead of treating direct self-contradiction as a distinct signal calling for abstention -- unsurprising, since the original prompt never named that case at all.
+
+**Fix attempt #1 (verified insufficient):** Added an explicit rule to `SYSTEM_PROMPT`: "if the conversation makes directly contradictory statements about the same facet ... do NOT resolve this by trusting whichever statement came last ... return insufficient_evidence." Re-ran *only* this facet/conversation pair directly against `score_batch()` (not the full 12-conversation benchmark, to avoid a ~40min re-run for a one-line prompt change) to check the fix before deciding whether to roll it out. Result: **identical output** -- still `scored, 1, 0.95`, same reasoning. An abstract rule alone did not change the model's behavior. This negative result is reported here rather than discarded, because "I tried a fix and verified it didn't work" is itself a real finding about this model's instruction-following depth on abstract multi-step rules.
+
+**Fix attempt #2 (verified working):** Replaced the abstract rule with a concrete worked example appended to `SYSTEM_PROMPT`: the exact same conversation/facet pair, showing the wrong answer (recency-biased scoring) explicitly labeled wrong with a one-line explanation, followed by the correct answer (`insufficient_evidence`, with reasoning citing the contradiction itself). Re-ran the identical single-facet call: now returns `status=insufficient_evidence, confidence=0.9`, with reason *"self-contradictory, no reliable direction can be read from this conversation"* -- the model correctly named the actual problem instead of picking a side.
+
+**Why fix #2 worked where #1 didn't:** Consistent with `DECISIONS.md` #3's trade-off (a 7B model was chosen for hardware fit, at a known cost in reasoning depth vs. a larger model) -- abstract multi-step instructions ("detect X, then when X is true, override your default Y") are exactly the kind of instruction-following a smaller model tends to struggle with, while a concrete right-vs-wrong example for the specific pattern is something even a smaller model can pattern-match against directly. This is a real, observed manifestation of that documented trade-off, not a hypothetical one.
+
+**Verification:** Direct `score_batch()` call on the exact `C03`/`Trust in others` pair now returns `insufficient_evidence` as shown above. The full benchmark was re-run end-to-end after this fix (see updated `eval/report.md`) to confirm the fix doesn't regress any of the other 19 reference rows and to keep the shipped report consistent with the current code.
+
+---

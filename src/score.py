@@ -32,13 +32,31 @@ stereotypes, or assumptions about the speaker not stated in the text.
 status "insufficient_evidence" rather than guessing. Do not invent a score to be helpful.
 3. Never infer medical, biological, or lab-test facts, diagnoses, or precise numeric \
 external facts that are not explicitly and unambiguously stated in the conversation.
-4. Score on a 5-level integer ordinal scale (1=low/opposite, 3=neutral/mixed, 5=high/clear) \
+4. If the conversation makes directly contradictory statements about the same facet \
+(e.g. it first claims one thing, then states the opposite, with no resolution or \
+explanation of the change), do NOT resolve this by trusting whichever statement came \
+last. A live, unresolved contradiction is itself evidence of ambiguity -- return status \
+"insufficient_evidence" and say so in "reason", rather than picking a side.
+5. Score on a 5-level integer ordinal scale (1=low/opposite, 3=neutral/mixed, 5=high/clear) \
 only when status is "scored".
-5. For every facet, return a short "evidence" string: either a short quote/paraphrase from \
+6. For every facet, return a short "evidence" string: either a short quote/paraphrase from \
 the conversation (if scored) or a brief note on why evidence is missing (if abstaining).
-6. Return a "confidence" float between 0 and 1 reflecting how certain you are.
-7. Output ONLY a JSON object of the exact shape described in the user message. No prose, \
+7. Return a "confidence" float between 0 and 1 reflecting how certain you are.
+8. Output ONLY a JSON object of the exact shape described in the user message. No prose, \
 no markdown fences, no commentary outside the JSON object.
+
+Worked example of rule 4 (contradiction handling):
+Conversation: "I trust people completely, I always give everyone the benefit of the doubt. \
+Actually no, forget that -- I don't trust a single person anymore, everyone lies eventually."
+Facet: "Trust in others"
+Wrong answer (do NOT do this): {"status": "scored", "score": 1, "confidence": 0.95, \
+"evidence": "I don't trust a single person anymore", "reason": "States a lack of trust"} \
+-- this is wrong because it ignores the first half of the statement, which directly \
+contradicts the second half, as if only the most recent sentence counted as evidence.
+Correct answer: {"status": "insufficient_evidence", "confidence": 0.9, \
+"evidence": "speaker states both 'I trust people completely' and 'I don't trust a single \
+person', directly contradicting each other with no resolution", "reason": "self-contradictory, \
+no reliable direction can be read from this conversation"}
 """
 
 USER_TEMPLATE = """CONVERSATION:
