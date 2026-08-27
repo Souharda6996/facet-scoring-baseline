@@ -58,7 +58,7 @@ data/processed/facet_index.npz
   │     (LLM is NEVER called for these)                          │
   │                                                               │
   └── conversation_observable == True                            │
-        -> src/score.py: batched (default 8/batch) LLM calls     │
+        -> src/score.py: batched (default 5/batch*) LLM calls    │
            -> src/llm_client.py: Ollama chat endpoint, JSON mode  │
            -> independently re-validated in Python: invalid       │
               status/score/confidence downgraded to               │
@@ -68,6 +68,7 @@ data/processed/facet_index.npz
   ▼
 src/pipeline.py: evaluate_conversation() merges both paths into one uniform result list
 ```
+*Batch size is 5, not 8, as a hardware-fit tuning knob — see `DEBUGGING.md` #4.*
 
 ### Why retrieval sees non-observable facets but the LLM never does
 
@@ -116,17 +117,17 @@ Two genuine failures remain in the current results, both reported rather than hi
 
 ## What I'd improve with another day
 
-0. **Fix the `C04` speaker-attribution failure** the same way the `C03` contradiction was fixed: add a concrete worked example to the system prompt showing a conversation where the speaker quotes someone else's trait and contrasts themself with it, with the wrong (misattributed) answer and the right answer both spelled out. The contradiction fix (`DEBUGGING.md` #6) worked via a worked example after an abstract rule alone failed, so that's the higher-probability first thing to try here too, verified narrowly on this one case before a full re-run.
-1. **Hand-author richer scoring anchors for the highest-retrieval-frequency facets**, keeping the generic template as fallback for the long tail — prioritized by actual usage rather than guessed upfront (ties into the 5000-facet scale discussion below).
-2. **Add an LLM-assisted second pass over taxonomy-ambiguous rows** (flagged by the rule-based classifier with a confidence score) rather than an all-or-nothing rule-based vs LLM-based choice.
-3. **Cache embeddings + LLM verdicts keyed on (facet_id, conversation_hash)** so repeated evaluation of the same conversation (e.g. during iterative benchmark development) doesn't re-call the LLM.
-4. **Calibration check**: compare the model's stated `confidence` against actual agreement rate in the benchmark (a simple reliability diagram) — flagged as brownie-points territory, not attempted here given the 24h window.
-5. Swap the flat numpy cosine-similarity retrieval for FAISS/HNSW once facet count materially exceeds what fits comfortably in memory (see below).
+1. **Fix the `C04` speaker-attribution failure** the same way the `C03` contradiction was fixed: add a concrete worked example to the system prompt showing a conversation where the speaker quotes someone else's trait and contrasts themself with it, with the wrong (misattributed) answer and the right answer both spelled out. The contradiction fix (`DEBUGGING.md` #6) worked via a worked example after an abstract rule alone failed, so that's the higher-probability first thing to try here too, verified narrowly on this one case before a full re-run.
+2. **Hand-author richer scoring anchors for the highest-retrieval-frequency facets**, keeping the generic template as fallback for the long tail — prioritized by actual usage rather than guessed upfront (ties into the 5000-facet scale discussion below).
+3. **Add an LLM-assisted second pass over taxonomy-ambiguous rows** (flagged by the rule-based classifier with a confidence score) rather than an all-or-nothing rule-based vs LLM-based choice.
+4. **Cache embeddings + LLM verdicts keyed on (facet_id, conversation_hash)** so repeated evaluation of the same conversation (e.g. during iterative benchmark development) doesn't re-call the LLM.
+5. **Calibration check**: compare the model's stated `confidence` against actual agreement rate in the benchmark (a simple reliability diagram) — flagged as brownie-points territory, not attempted here given the 24h window.
+6. Swap the flat numpy cosine-similarity retrieval for FAISS/HNSW once facet count materially exceeds what fits comfortably in memory (see below).
 
 ## Scale note: how this design handles 5,000 facets
 
 - **Indexing/retrieval:** The embedding step (`src/embed_index.py`) is already fully vectorized and facet-count-agnostic — encoding 5,000 short strings with `all-MiniLM-L6-v2` is a few seconds of one-time work. The current *search* is a brute-force `embeddings @ query_embedding` matrix-vector product (369x384 floats today) — at 5,000 facets that's still under 10MB and sub-millisecond per query, so a flat index would likely still be fine. The documented upgrade path is FAISS (`IndexFlatIP` for exactness, or `IndexHNSWFlat` for approximate sub-linear search past ~50k-100k items) — a swap-in replacement for the `retrieve()` method's similarity search, not an architecture change.
-- **Batching:** Batch size stays fixed (default 8 facets/call) regardless of catalogue size — it's bounded by prompt-length/attention budget and by keeping each LLM call's JSON output small enough to parse reliably, not by facet count. More facets means more batches per conversation only insofar as `top_k` (how many candidates retrieval returns) is raised; `top_k` itself should scale sub-linearly with catalogue size (the point of retrieval is precisely that you don't need more candidates just because the catalogue grew).
+- **Batching:** Batch size stays fixed (default 5 facets/call on this hardware; see `DEBUGGING.md` #4) regardless of catalogue size — it's bounded by prompt-length/attention budget and by keeping each LLM call's JSON output small enough to parse reliably, not by facet count. More facets means more batches per conversation only insofar as `top_k` (how many candidates retrieval returns) is raised; `top_k` itself should scale sub-linearly with catalogue size (the point of retrieval is precisely that you don't need more candidates just because the catalogue grew).
 - **Model calls:** Per-conversation LLM calls = `ceil(top_k / batch_size)`, independent of total catalogue size. This is the entire point of the retrieve-then-score design over a "score everything" design, whose cost would scale linearly with catalogue size.
 - **Caching:** The natural cache key is `(facet_id, conversation_hash)` — once a conversation has been scored against a facet, that verdict never needs recomputing unless the conversation or the facet's anchors change. At 5,000 facets with a modest `top_k` (say 20-30), most conversations still only touch a small slice of the catalogue, so cache hit rate should climb quickly across a realistic conversation stream (repeated topics, similar phrasing).
 - **Latency:** Dominated by LLM call count x per-call latency, not by embedding search (negligible at this scale) or the taxonomy gate (a dict/set lookup). First bottleneck to watch: **local single-GPU throughput**, since batches for one conversation are currently called sequentially. Parallelizing independent batch calls (they don't depend on each other) or moving to a hosted inference endpoint with real concurrency would be the first thing to change before facet count itself becomes the bottleneck.
