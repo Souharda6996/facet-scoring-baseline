@@ -53,8 +53,12 @@ def run():
         conv_id = conv["id"]
         needed_facet_ids = ref.loc[ref["conversation_id"] == conv_id, "facet_id"].tolist()
 
+        # top_k kept modest so the full 12-conversation benchmark finishes in a
+        # reasonable time on this machine's CPU/GPU-split local inference (see
+        # DEBUGGING.md #4); reference-label coverage is guaranteed regardless
+        # via force_facet_ids, independent of top_k.
         result = evaluate_conversation(
-            conv["text"], retriever, top_k=15,
+            conv["text"], retriever, top_k=8,
             force_facet_ids=needed_facet_ids,
         )
         for r in result["all_results"]:

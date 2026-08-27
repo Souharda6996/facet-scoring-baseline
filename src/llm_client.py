@@ -18,7 +18,7 @@ class LLMCallError(Exception):
 
 
 def call_llm(system_prompt: str, user_prompt: str, model: str = DEFAULT_MODEL,
-             temperature: float = 0.0, timeout: int = 120, retries: int = 1) -> str:
+             temperature: float = 0.0, timeout: int = 240, retries: int = 1) -> str:
     """Calls the local Ollama chat endpoint, requesting JSON-formatted output.
     Returns the raw text content. Raises LLMCallError after exhausting retries
     -- callers must catch this and abstain rather than crash (see score.py)."""

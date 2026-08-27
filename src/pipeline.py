@@ -10,7 +10,12 @@ from retrieve import FacetRetriever
 from score import score_batch, chunk
 
 DEFAULT_TOP_K = 20
-DEFAULT_BATCH_SIZE = 8
+# Kept modest (rather than the 8-10 that would be fine on faster/hosted
+# inference) because an 8-facet batch measured ~144s to generate on this
+# machine's CPU/GPU-split 7B inference -- see DEBUGGING.md #4. Batching is
+# still the point (this is not one call per facet); the number is a
+# hardware-fit tuning knob, not an architectural constant.
+DEFAULT_BATCH_SIZE = 5
 
 
 def evaluate_conversation(
