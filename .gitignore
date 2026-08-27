@@ -6,4 +6,5 @@ venv/
 .pytest_cache/
 models/
 *.faiss
+*.npz
 .env

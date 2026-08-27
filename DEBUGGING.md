@@ -31,3 +31,17 @@ Real issues hit during development, not hypothetical ones. Each entry: symptom -
 **Verification:** Added `tests/test_taxonomy.py::test_parenthesized_clinical_code_matches_despite_word_boundary_fix`, asserting all three of `"Depression (DEP)"`, `"Hypomania (Ma)"`, `"Hysteria (Hy)"` classify as `clinical_psychological_scale`. All 9 tests in the suite pass; re-ran full `preprocess.py` and confirmed via `data/processed/AUDIT_SUMMARY.md` sample listing.
 
 ---
+
+## 3. Score-downgrade diagnostic note silently discarded when the model also supplied its own `reason` text
+
+**Symptom:** Writing `tests/test_score_parsing.py` before the LLM was even online (pure unit tests against `parse_batch_response`), a test asserting that an out-of-range score (`"score": 9`, outside the 1-5 scale) produces a `reason` mentioning `invalid_score_value` failed: the actual `reason` field just contained `"y"` -- the model's own (fabricated, in this synthetic test) reason string, not the diagnostic explaining why the score was rejected.
+
+**Diagnosis:** In `_coerce_result_item()` (`src/score.py`), when a score/status is downgraded, a local `note` variable is set to something like `"invalid_score_value:9"`. But the final `reason` assignment was `reason = item.get("reason") if item.get("reason") else (note or "")` -- i.e. it only fell back to `note` when the model's own `reason` field was empty. Since the model almost always fills in *some* `reason` text, the coercion note was getting silently overwritten in the common case, not just the edge case.
+
+**Root cause:** The fallback logic had the priority backwards for a downgrade scenario: it treated the model's self-reported justification as authoritative over the pipeline's own record of *why it stopped trusting the model's structured fields*. That's exactly backwards -- the whole point of the coercion layer is to expose when the model's output couldn't be trusted as-is.
+
+**Fix:** Changed the logic so that when a coercion `note` exists, it always appears in the final `reason` (prefixed, with the model's original text appended in parentheses for context), instead of being conditionally overwritten.
+
+**Verification:** `tests/test_score_parsing.py::test_out_of_range_score_is_downgraded_not_trusted` now passes; full suite is 17/17 passing (`pytest tests/`).
+
+---
