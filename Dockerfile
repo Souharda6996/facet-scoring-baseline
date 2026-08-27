@@ -2,6 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# sentence-transformers pulls in torch, and pip's default wheel is CUDA-enabled
+# (multi-GB) even though this container never touches a GPU -- the actual LLM
+# inference happens in Ollama, outside this image (see OLLAMA_URL below); this
+# container only runs the small MiniLM embedding model on CPU. Installing the
+# CPU-only torch wheel first (from PyTorch's own CPU index) means the later
+# `pip install -r requirements.txt` finds torch already satisfied and skips
+# the CUDA download entirely -- found while actually running `docker build`
+# for the first time and watching it pull ~16GB of CUDA libraries for no
+# reason (see DEBUGGING.md).
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -244,8 +244,11 @@ def evaluate_conversation(conversation, retriever, top_k=20, batch_size=5, ...):
 | **Agreement with reference labels** | **18 / 20 (90%)** |
 | **Hallucinations on gated facets** | **0 / 20** |
 | Required hallucination-bait cases correctly abstained | **3 / 3** |
+| Organic retrieval recall @ top_k=8 (unassisted) | **9 / 20 (45%)** |
 
 </div>
+
+> **Read the recall row before trusting the agreement row.** This benchmark uses `force_facet_ids` to guarantee every reference facet reaches the scorer, so the 90% figure validates the **scoring** stage, not the full retrieve-then-score pipeline unassisted. Measured separately, organic embedding retrieval alone only surfaces 45% of reference facets at `top_k=8` — a real, disclosed limitation, not glossed over. Full breakdown: [`eval/report.md`](eval/report.md) § *Retrieval recall (unassisted)*. The taxonomy gate's guarantees (the 0/20 hallucination number) are completely unaffected by this — it depends on `facet_type` classification, not retrieval quality.
 
 ```mermaid
 flowchart LR
@@ -341,7 +344,7 @@ The failed attempt is kept in [`DEBUGGING.md` #6](DEBUGGING.md) next to the one 
 ## Engineering decisions and debugging
 
 <details>
-<summary><b>5 non-trivial decisions (full detail in <code>DECISIONS.md</code>)</b></summary>
+<summary><b>6 non-trivial decisions (full detail in <code>DECISIONS.md</code>)</b></summary>
 
 <br>
 
@@ -349,12 +352,13 @@ The failed attempt is kept in [`DEBUGGING.md` #6](DEBUGGING.md) next to the one 
 2. **Where the anti-hallucination guarantee lives: a Python gate, not a prompt instruction** — a stochastic model can't be the only thing standing between it and a hallucination.
 3. **Model choice: Qwen2.5-7B-Instruct via Ollama** — the largest model that actually runs end-to-end within the time and hardware budget (4GB VRAM), not the largest model on paper.
 4. **Scoring anchors: a generic template, not 399 hand-written rubrics** — reproducible coverage now, prioritized hand-authoring later, driven by real retrieval frequency rather than guesswork.
-5. **Embedding format ablation: tested my own assumption, reported the result honestly even though it didn't clearly favor my original choice** — see [`eval/retrieval_ablation_report.md`](eval/retrieval_ablation_report.md).
+5. **Embedding format/model ablation, extended twice: tested my own assumptions, reported mixed results honestly rather than picking the flattering read** — bare facet names beat name+type context; a stronger model (BGE) improved mean rank a lot but not Recall@8/20, so the shipped default didn't change either time. See [`eval/retrieval_ablation_report.md`](eval/retrieval_ablation_report.md).
+6. **Disclosing organic retrieval recall (45%) as its own labeled number, not just a code comment** — a technically-disclosed-but-easy-to-miss caveat isn't the same as an actually-surfaced one. See the benchmark section above and [`eval/report.md`](eval/report.md).
 
 </details>
 
 <details>
-<summary><b>6 real bugs found through testing, not just described (full detail in <code>DEBUGGING.md</code>)</b></summary>
+<summary><b>7 real bugs found through testing, not just described (full detail in <code>DEBUGGING.md</code>)</b></summary>
 
 <br>
 
@@ -366,6 +370,7 @@ The failed attempt is kept in [`DEBUGGING.md` #6](DEBUGGING.md) next to the one 
 | 4 | An 8-facet batch (~144s to generate) exceeded the 120s call timeout, silently discarding real model output | Live benchmark run |
 | 5 | Hand-written reference CSV broke on an unquoted comma in prose | `eval/run_eval.py` crashing on first run |
 | 6 | Model resolved a self-contradictory statement via recency instead of abstaining | Live benchmark run + narrow-then-full verification cycle |
+| 7 | Adding a new report column via string-slicing (`s[:-1] + ...`) silently dropped the separating `\|`, merging two markdown table columns | Inspecting the regenerated report output |
 
 </details>
 

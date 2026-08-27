@@ -75,6 +75,23 @@ A few moments in this build were deliberately not left to the agent's own judgme
 
 ---
 
+### 6. Requested an independent, critical self-review against the actual rubric — then acted on what it found
+
+**Direction:** Score the submission honestly against the assignment's own stated evaluation weights, with no bias toward a favorable result, and report what needed fixing.
+
+**What the review found:** The benchmark's 90% agreement figure was real for the scoring stage, but `eval/run_eval.py` uses `force_facet_ids` to guarantee reference-facet coverage — so the number didn't demonstrate organic retrieval quality, and that caveat lived only in a code comment, not anywhere a reader would actually see it next to the headline metric. Checking it against `eval/retrieval_ablation_report.md` confirmed organic retrieval only achieves 45% recall at the benchmark's own `top_k=8`.
+
+**What I did about it, not just noted it:**
+1. Added `compute_retrieval_recall()` to `eval/run_eval.py` — measures organic retrieval *before* any force-adding — and a "Retrieval recall (unassisted)" section that now leads `eval/report.md`, directly under the agreement/hallucination numbers, plus a per-row "retrieved organically?" column. See `DECISIONS.md` #6.
+2. Extended `eval/retrieval_ablation.py` to a third configuration (`BAAI/bge-small-en-v1.5`, a stronger retrieval-tuned model). Result was genuinely mixed — much better mean rank, but *not* better Recall@8/20 than the already-shipped bare-name MiniLM config. The report states this plainly rather than reframing a non-win as a win because one number (mean rank) moved. See `DECISIONS.md` #5 follow-up.
+3. Actually ran `docker build .` (it had never been executed before this) rather than leaving the Dockerfile as an untested claim.
+
+**What AI got wrong (#4, found while implementing #1):** The first version of the new report column used string-slicing (`header[:-1] + " new column |"`) to append a column to an existing markdown table line. This silently dropped the separating `|`, merging two columns into one in the rendered table. Caught by actually reading the regenerated `eval/report.md` output, not by re-reading the code. Fixed by rebuilding each row from an explicit list of cells joined with `" | "` instead of slicing a pre-formatted string. Full detail in `DEBUGGING.md` #7.
+
+**How I verified:** Every number quoted in the review response before making changes (45% recall, the BGE mean-rank/recall split) was pulled fresh from the actual generated report files in the same turn, not recalled from memory of earlier runs.
+
+---
+
 ### Pattern across this whole log
 
 Every bug above was caught by **running the code and checking real output** — spot-checking the audit CSV, a unit test asserting a specific value, or a live benchmark run against the real model — never by re-reading code and reasoning that it looked fine. And the one prompt-engineering fix in this log didn't get trusted until it was verified twice: narrowly, on the exact case it was meant to fix, and then again at full scale, on everything it could have broken. That two-step discipline — cheap check first, full check before shipping — is the actual method this project was built with, not just something claimed after the fact.

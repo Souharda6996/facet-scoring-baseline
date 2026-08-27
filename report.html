@@ -228,14 +228,19 @@
   .pill.gate { background: var(--neutral-soft); color: var(--neutral); }
 
   /* ---------- ablation ---------- */
-  .abl-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  .abl-compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
   .abl-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
   .abl-card.win { border-color: color-mix(in srgb, var(--violet) 45%, var(--line)); }
   .abl-card .abl-name { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
   .abl-card .abl-metric { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-top: 1px dashed var(--line-soft); }
   .abl-card .abl-metric:first-of-type { border-top: none; }
   .abl-card .abl-metric b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-  @media (max-width: 600px) { .abl-compare { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .abl-compare { grid-template-columns: 1fr; } }
+  .callout {
+    margin: 18px 0; padding: 16px 18px; background: var(--amber-soft);
+    border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent); border-radius: 10px; font-size: 14.5px;
+  }
+  .callout b { color: var(--amber); }
 
   ul.tight { padding-left: 20px; margin: 10px 0; }
   ul.tight li { margin: 6px 0; font-size: 14.5px; color: var(--ink-soft); }
@@ -415,6 +420,8 @@
         <span><span class="sw" style="background:var(--neutral)"></span>hallucination — 0</span>
       </div>
 
+      <div class="callout"><b>Read this before trusting the 90% figure above.</b> This benchmark force-includes reference facets so the scorer always evaluates them (see <code>eval/run_eval.py</code>) — it validates the <em>scoring</em> stage, not full retrieve-then-score end to end. Measured separately, organic retrieval alone finds only <b>9/20 (45%)</b> of reference facets at <code>top_k=8</code>. Full breakdown and the per-row detail: <a href="#ablation">Ablation section below</a> and <code>eval/report.md</code>.</div>
+
       <div class="table-scroll">
         <table class="bench">
           <thead><tr><th>Conv</th><th>Facet</th><th>Expected</th><th>System</th><th>Outcome</th></tr></thead>
@@ -525,7 +532,7 @@
     <section id="engineering"><div class="band section-inner">
       <p class="kicker">07 — Process</p>
       <h2 class="h">Engineering decisions and debugging</h2>
-      <p class="section-note">5 non-trivial decisions, 6 real bugs — full detail in <code>DECISIONS.md</code> and <code>DEBUGGING.md</code>.</p>
+      <p class="section-note">6 non-trivial decisions, 7 real bugs — full detail in <code>DECISIONS.md</code> and <code>DEBUGGING.md</code>.</p>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:8px" id="engineering-grid">
         <div>
@@ -534,7 +541,8 @@
           <div class="dcard"><div class="num">02</div><div><div class="ttl">Anti-hallucination guarantee lives in Python, not a prompt</div><div class="desc">A stochastic model can't be the only thing standing between it and a hallucination.</div></div></div>
           <div class="dcard"><div class="num">03</div><div><div class="ttl">Qwen2.5-7B via Ollama</div><div class="desc">The largest model that actually runs end-to-end within the 4GB-VRAM budget, not the largest on paper.</div></div></div>
           <div class="dcard"><div class="num">04</div><div><div class="ttl">Generic anchor template, not 399 hand-written rubrics</div><div class="desc">Reproducible coverage now; hand-authoring prioritized later by real retrieval frequency.</div></div></div>
-          <div class="dcard"><div class="num">05</div><div><div class="ttl">Tested my own embedding-format assumption</div><div class="desc">Reported the ablation result honestly even though it didn't clearly favor my original choice.</div></div></div>
+          <div class="dcard"><div class="num">05</div><div><div class="ttl">Embedding ablation, extended twice</div><div class="desc">Bare name beat name+type; a stronger model (BGE) improved mean rank but not Recall@8/20 — mixed result, reported as such.</div></div></div>
+          <div class="dcard"><div class="num">06</div><div><div class="ttl">Disclosed retrieval recall as its own number</div><div class="desc">A code-comment caveat isn't the same as an actually-surfaced one — see the benchmark section above.</div></div></div>
         </div>
         <div>
           <div class="kicker" style="margin-bottom:0">Debugging log</div>
@@ -544,32 +552,39 @@
           <div class="dcard"><div class="num">04</div><div><div class="ttl">8-facet batch exceeded the call timeout</div><div class="desc">~144s generation &gt; 120s timeout, discarding real output — caught in the first live run.</div></div></div>
           <div class="dcard"><div class="num">05</div><div><div class="ttl">Unquoted comma broke the reference CSV</div><div class="desc">Hand-written CSV, not csv.writer — caught by run_eval.py crashing immediately.</div></div></div>
           <div class="dcard"><div class="num">06</div><div><div class="ttl">Contradiction resolved by recency</div><div class="desc">See the fix cycle above — narrow verification, then full re-verification.</div></div></div>
+          <div class="dcard"><div class="num">07</div><div><div class="ttl">String-slicing dropped a table's "|" separator</div><div class="desc">Merged two markdown columns silently — caught by reading the actual regenerated output.</div></div></div>
         </div>
       </div>
     </div></section>
 
     <section id="ablation"><div class="band section-inner">
       <p class="kicker">08 — Optional: comparison/ablation</p>
-      <h2 class="h">Does embedding facet_type context actually help retrieval?</h2>
-      <p class="section-note"><code>src/embed_index.py</code> embeds facets as <code>"{name} ({facet_type})"</code> rather than the bare name. Tested that assumption against the 20 reference pairs — result was genuinely mixed, and reported as such.</p>
+      <h2 class="h">Three retrieval configurations, tested honestly</h2>
+      <p class="section-note">Extended twice after a self-critique pass flagged retrieval recall as the weakest part of this system. Neither extension produced a clean win — both are reported as found.</p>
+
+      <div class="callout"><b>Read this next to the benchmark's 90% agreement number:</b> that figure validates the scoring stage only. This system's <code>eval/run_eval.py</code> force-includes reference facets so the scorer always sees them — organic, unassisted retrieval alone finds only <b>9/20 (45%)</b> of them at the benchmark's <code>top_k=8</code>. The taxonomy gate's 0/20 hallucination guarantee is untouched by this (it depends on <code>facet_type</code>, not retrieval), but retrieval recall is the real, disclosed weak point of the current system.</div>
 
       <div class="abl-compare">
         <div class="abl-card">
-          <div class="abl-name">Current — name + facet_type</div>
+          <div class="abl-name">Shipped — MiniLM, name + facet_type</div>
           <div class="abl-metric"><span>Mean rank</span><b>59.2</b></div>
-          <div class="abl-metric"><span>Median rank</span><b>13.0</b></div>
           <div class="abl-metric"><span>Recall@8</span><b>45%</b></div>
-          <div class="abl-metric"><span>Better on</span><b>6 / 20</b></div>
+          <div class="abl-metric"><span>Recall@20</span><b>65%</b></div>
         </div>
         <div class="abl-card win">
-          <div class="abl-name">Ablated — bare facet name</div>
+          <div class="abl-name">Ablated — MiniLM, bare name</div>
           <div class="abl-metric"><span>Mean rank</span><b>48.9</b></div>
-          <div class="abl-metric"><span>Median rank</span><b>8.5</b></div>
           <div class="abl-metric"><span>Recall@8</span><b>50%</b></div>
-          <div class="abl-metric"><span>Better on</span><b>9 / 20</b></div>
+          <div class="abl-metric"><span>Recall@20</span><b>65%</b></div>
+        </div>
+        <div class="abl-card">
+          <div class="abl-name">Stronger model — BGE-small-en-v1.5</div>
+          <div class="abl-metric"><span>Mean rank</span><b>35.5</b></div>
+          <div class="abl-metric"><span>Recall@8</span><b>45%</b></div>
+          <div class="abl-metric"><span>Recall@20</span><b>60%</b></div>
         </div>
       </div>
-      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:16px">The bare-name format ranked <b>slightly better</b>. With n=20, that's directional evidence, not a statistically decisive result — the default was kept, but the assumption is now data-informed rather than a silent guess. Full write-up: <code>DECISIONS.md</code> #5.</p>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:16px"><b>Genuinely mixed, not smoothed over:</b> BGE has by far the best mean rank — it rarely buries a facet catastrophically (e.g. <code>Intelligence Quotient (IQ)</code> ranks 139th under BGE vs. 330th under MiniLM) — but it does <b>not</b> beat the ablated MiniLM config on Recall@8 or Recall@20, the cutoffs this system actually uses. At n=20, <b>the ablated MiniLM config remains the best-supported choice</b> of the three, and the production index was not swapped on this result alone. Full numbers: <code>eval/retrieval_ablation_report.md</code>, reasoning: <code>DECISIONS.md</code> #5.</p>
     </div></section>
 
     <section id="scale"><div class="band section-inner">

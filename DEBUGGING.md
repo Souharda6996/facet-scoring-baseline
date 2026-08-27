@@ -91,3 +91,31 @@ Real issues hit during development, not hypothetical ones. Each entry: symptom -
 **Verification:** Direct `score_batch()` call on the exact `C03`/`Trust in others` pair now returns `insufficient_evidence` as shown above. The full benchmark was re-run end-to-end after this fix (see updated `eval/report.md`) to confirm the fix doesn't regress any of the other 19 reference rows and to keep the shipped report consistent with the current code.
 
 ---
+
+## 7. Adding a new report column broke the markdown table's pipe separators, silently merging two columns
+
+**Symptom:** While adding the "retrieved organically?" column to `eval/report.md`'s row-by-row table (see `DECISIONS.md` #6), the freshly regenerated table rendered with a broken header: `"...outcome | detail  retrieved organically? |"` -- two spaces and no `|` between `detail` and the new column, meaning the two columns would render as one merged cell instead of two separate ones.
+
+**Diagnosis:** The header/row construction used `header[:-1] + " retrieved organically? |"` -- i.e. "strip the last character of the existing string, then append the new column text." The last character of `"...| detail |"` is `|`, so stripping it left `"...| detail "` (trailing space, no pipe), and appending `" retrieved organically? |"` produced `"...| detail  retrieved organically? |"` with the separating pipe simply gone. The same off-by-one string-slicing mistake was made in three places: the header, the separator row (`|---|---|...`), and every data row.
+
+**Root cause:** Treating "add a column to a markdown table" as a string-suffix-editing problem (`[:-1] + new_suffix`) instead of a structural one. String slicing on `"...| X |"` to insert a new trailing column needs to insert *before* the final `|`, not remove it and hope the replacement re-supplies an equivalent one -- the replacement text didn't start with `|`, so no separator existed between the old last column and the new one.
+
+**Fix:** Rewrote the table-building code in `eval/run_eval.py`'s `write_report()` to construct each row from an explicit list of cell values joined with `" | "` and wrapped in `"| ... |"` (`"| " + " | ".join(cells) + " |"`), for both the header and every data row, instead of string-slicing an already-formatted line. This is correct by construction regardless of how many columns exist, rather than being correct only for the exact column count it was originally written for.
+
+**Verification:** Regenerated `eval/report.md` via `python eval/run_eval.py --report-only` and inspected the actual output: the header now reads `"| conv | facet | ... | detail | retrieved organically? |"` with a proper `|` between every column, and every data row has exactly 9 pipe-separated cells matching the 9-column header.
+
+---
+
+## 8. `docker build` had never actually been run -- it pulled ~16GB of unnecessary CUDA libraries and stalled on layer export
+
+**Symptom:** The Dockerfile existed and looked reasonable but had never been executed against a real Docker daemon. Running `docker build -t facet-scoring-baseline .` for the first time: the `pip install -r requirements.txt` step took over 500 seconds and pulled a long list of `nvidia-cu*` packages (`nvidia-cublas`, `nvidia-cudnn-cu13`, `nvidia-cufft`, `nvidia-curand`, `nvidia-cusolver`, `nvidia-cusparse`, `nvidia-nccl-cu13`, and more), and the final `exporting layers` step then stalled indefinitely while the host's free disk space dropped from ~23GB to ~15GB during the build.
+
+**Diagnosis:** `docker system df` showed the build had produced ~16GB of images and ~10GB of build cache. `docker images` and the pip install log made the cause obvious: `sentence-transformers` depends on `torch`, and `pip install torch` on a plain `python:3.11-slim` image defaults to the full CUDA-enabled wheel (multiple GB of NVIDIA driver libraries), regardless of whether the container will ever have GPU access.
+
+**Root cause:** This container was never going to use a GPU -- the only ML inference it performs is encoding short facet/conversation strings with `all-MiniLM-L6-v2` (a 22M-parameter model that runs trivially fast on CPU), and the actual LLM scoring happens in a separate Ollama process outside the image entirely (`OLLAMA_URL`, already documented in the Dockerfile). Nothing in `requirements.txt` or the Dockerfile constrained `pip` to a CPU-only torch build, so it silently took the much larger default.
+
+**Fix:** Added a `RUN pip install torch --index-url https://download.pytorch.org/whl/cpu` step in the Dockerfile *before* `pip install -r requirements.txt`, using PyTorch's own CPU-only wheel index. When `requirements.txt` is installed afterward, `torch` is already satisfied and `sentence-transformers` doesn't trigger a second, CUDA-enabled install.
+
+**Verification:** Stopped the original stalled build, ran `docker builder prune -af` to reclaim the ~6GB of build cache it had produced (confirmed via `docker system df` before/after, and confirmed via `docker images` that no partial images were left behind -- the only images present were the host machine's pre-existing, unrelated containers), then re-ran `docker build` with the CPU-only torch step added. The rebuilt image finished in full (`facet-scoring-baseline:latest`, 2.25GB -- down from a build that was on track for several times that) and, critically, actually **runs**: `docker run --rm facet-scoring-baseline` executes the image's default command (`pytest tests/ -v`) inside the container and all 17 tests pass, confirming the image isn't just buildable but functional end to end.
+
+---
