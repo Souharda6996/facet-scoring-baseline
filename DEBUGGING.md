@@ -59,3 +59,17 @@ Real issues hit during development, not hypothetical ones. Each entry: symptom -
 **Verification:** Re-ran the same 8-facet prompt directly against `call_llm()` with `timeout=300, retries=0` and confirmed it now returns well-formed, fully reasoned JSON for all 8 facets in ~144s (comfortably under the new 240s default) -- e.g. `Adventure-Seeking Behavior` correctly scored 5/5 with evidence quoting the bungee/skydiving line, and topically irrelevant facets like `Buddhist practice` correctly returned `not_observable` with a real reason, not the blanket-failure fallback pattern.
 
 ---
+
+## 5. `eval/run_eval.py` crashed immediately: `reference_labels.csv` had unquoted commas inside rationale text
+
+**Symptom:** First full run of `eval/run_eval.py` failed instantly with `pandas.errors.ParserError: Error tokenizing data. C error: Expected 6 fields in line 7, saw 7`.
+
+**Diagnosis:** `eval/reference_labels.csv` was hand-written as plain comma-joined lines, not generated through a CSV-aware writer. Line 7 (the C04 "quoted" conversation's rationale) reads: `"...describes themself as a heavy planner -- the trait belongs to a third party, not the speaker"` -- the comma before "not the speaker" is prose punctuation, not a field separator, but the raw file had no quoting to say so, so the CSV parser split it into an extra 7th field.
+
+**Root cause:** Authoring a CSV by hand (string-joining values with commas) instead of through `csv.writer`, for a file where free-text rationale fields were always going to contain commas. This is the same category of mistake `src/preprocess.py` was built specifically to avoid for the facet catalogue itself ("reproducible preprocessing rather than manually editing the file") -- it just resurfaced in a benchmark fixture that wasn't generated through code.
+
+**Fix:** Rewrote `eval/reference_labels.csv` via Python's `csv.writer`, which automatically quotes any field containing a comma (visible in the resulting file: the C04, C05, C09, and C10 rationale fields are now wrapped in `"..."`).
+
+**Verification:** `pd.read_csv('eval/reference_labels.csv')` now parses cleanly (20/20 rows); re-launched `eval/run_eval.py`.
+
+---
