@@ -5,11 +5,12 @@ Model choice: qwen2.5:7b-instruct (Apache-2.0 license, 7B params). See
 DECISIONS.md for why Qwen2.5-7B over alternatives.
 """
 import json
+import os
 import time
 
 import requests
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/chat")
 DEFAULT_MODEL = "qwen2.5:7b-instruct"
 
 
