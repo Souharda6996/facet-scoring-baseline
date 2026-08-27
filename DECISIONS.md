@@ -62,3 +62,21 @@ Non-trivial decisions made during this assignment: the ambiguity/problem, option
 **Trade-off:** Generic anchors are noticeably weaker for facets where "high" and "low" aren't self-evident opposites from the name alone (e.g. `Neuroticism`, `Discreteness`) compared to a facet like `Talkativeness` where the template reads naturally. Accepted in exchange for 100% reproducible, zero-manual-effort coverage of the full catalogue — and because this is exactly the kind of prioritization problem ("which facets deserve hand-authored rubrics?") that the retrieval-frequency signal from real usage should drive, rather than guessing upfront which of 399 facets matter most.
 
 ---
+
+## 5. Embedding text format: name + facet_type context, tested against bare name — result was inconclusive, and honestly reported as such
+
+**Problem:** `src/embed_index.py` embeds each facet as `"{normalized_value} ({facet_type})"` rather than just the bare name, on the theory that the extra context word (e.g. "(medical biological)") helps the embedding model place topically related facets closer together. This was an assumption made at design time, not something validated before shipping.
+
+**Options considered:**
+- **Bare facet name only.** Simpler, shorter, no assumption baked in.
+- **Name + facet_type context (originally shipped as the default).** More semantically explicit, on the (untested) theory that it helps.
+
+**What I did:** Rather than leave the assumption unchecked, I ran `eval/retrieval_ablation.py` — a same-day ablation (pure embedding computation, no LLM calls) comparing both formats' retrieval rank against the 20 ground-truth (conversation, facet) pairs in `eval/reference_labels.csv`. Full results in `eval/retrieval_ablation_report.md`.
+
+**Result (reported honestly, not spun):** The bare-name format actually ranked slightly *better* on this reference set — mean rank 48.9 vs. 59.2, better on 9/20 pairs vs. 6/20 for the name+type format (5 tied). The name+type format did noticeably worse specifically on the low-evidence conversation (`C07`) — plausibly because appending the same generic type-context phrase to every facet of a given type (e.g. "(personality trait or disposition)" on hundreds of rows) makes those facets look more similar to each other and to generic small-talk text, diluting the name's own discriminating signal exactly when there's no strong topical anchor to rely on instead.
+
+**Choice:** Kept the name+facet_type format as the shipped default rather than switching on this result. With n=20 and a 20-catalogue-wide reference set, this difference is directional evidence, not a statistically decisive result — switching a production default on a single small ablation would be overreacting to noise. But the assumption is no longer *unvalidated* — it's now a flagged, data-informed open question rather than a silent guess.
+
+**Trade-off:** Choosing not to act immediately on suggestive-but-inconclusive data, in exchange for not thrashing a default based on 20 data points. The correct next step (noted in README "what I'd improve with another day") is a larger reference set before deciding either way with real confidence -- this ablation's value is in having *asked the question* and recorded a real answer, not in having produced a final verdict.
+
+---

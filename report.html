@@ -1,0 +1,408 @@
+<title>Facet Scoring Baseline — Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #171b1f;
+    --ink-soft: #454c54;
+    --paper: #f3f5f4;
+    --surface: #ffffff;
+    --surface-sunken: #eaece9;
+    --line: #d8dcd8;
+    --accent: #2f6a68;
+    --accent-soft: #e4efee;
+    --amber: #b3781f;
+    --amber-soft: #f5ead4;
+    --good: #3f7d4f;
+    --good-soft: #e1efe3;
+    --bad: #ab3a3a;
+    --bad-soft: #f6e3e2;
+    --neutral: #5c6470;
+    --neutral-soft: #e7e9eb;
+    --display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --body: 'Public Sans', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eceeec;
+      --ink-soft: #b7bdc4;
+      --paper: #14171a;
+      --surface: #1b1f23;
+      --surface-sunken: #22262a;
+      --line: #33383d;
+      --accent: #6fb3ae;
+      --accent-soft: #1e2e2d;
+      --amber: #d9a44f;
+      --amber-soft: #332818;
+      --good: #6cbf7f;
+      --good-soft: #1c2d20;
+      --bad: #e28080;
+      --bad-soft: #332020;
+      --neutral: #9aa1ab;
+      --neutral-soft: #24282c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eceeec;
+    --ink-soft: #b7bdc4;
+    --paper: #14171a;
+    --surface: #1b1f23;
+    --surface-sunken: #22262a;
+    --line: #33383d;
+    --accent: #6fb3ae;
+    --accent-soft: #1e2e2d;
+    --amber: #d9a44f;
+    --amber-soft: #332818;
+    --good: #6cbf7f;
+    --good-soft: #1c2d20;
+    --bad: #e28080;
+    --bad-soft: #332020;
+    --neutral: #9aa1ab;
+    --neutral-soft: #24282c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  ::selection { background: var(--accent-soft); }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px 96px; }
+
+  header.masthead {
+    padding: 64px 0 40px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(34px, 5vw, 52px);
+    line-height: 1.06;
+    letter-spacing: -0.01em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .dek {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 36px 0 0;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 20px 18px;
+  }
+  .stat .n {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .stat .n.good { color: var(--good); }
+  .stat .label {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    letter-spacing: 0.01em;
+  }
+
+  section { margin: 56px 0; }
+  h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 27px;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  .section-note {
+    color: var(--ink-soft);
+    font-size: 15px;
+    max-width: 68ch;
+    margin: 0 0 26px;
+  }
+  p { max-width: 72ch; }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+
+  /* pipeline flow */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: stretch;
+    margin: 6px 0 0;
+  }
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 14px 16px;
+    flex: 1 1 150px;
+    min-width: 150px;
+  }
+  .flow-step .k {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+  .flow-step .t { font-weight: 600; margin-top: 6px; font-size: 14.5px; }
+  .flow-step .d { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+  .flow-arrow { display: flex; align-items: center; color: var(--line); font-size: 20px; padding: 0 2px;}
+  .gate-note {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: var(--amber-soft);
+    border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+    border-radius: 9px;
+    font-size: 14.5px;
+  }
+  .gate-note b { color: var(--amber); }
+
+  /* taxonomy bars */
+  .taxo-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .taxo-table td { padding: 9px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .taxo-table tr:last-child td { border-bottom: none; }
+  .taxo-name { font-family: var(--mono); font-size: 13px; white-space: nowrap; padding-right: 16px; }
+  .taxo-bar-cell { width: 100%; }
+  .taxo-bar-track { background: var(--surface-sunken); border-radius: 5px; height: 20px; position: relative; overflow: hidden; }
+  .taxo-bar-fill { height: 100%; background: var(--accent); border-radius: 5px; }
+  .taxo-bar-fill.blocked { background: var(--neutral); }
+  .taxo-count { font-family: var(--mono); font-size: 13px; padding-left: 12px; text-align: right; color: var(--ink-soft); white-space: nowrap; }
+
+  .legend { display: flex; gap: 20px; margin-top: 14px; font-size: 13px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  /* benchmark table */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table.bench { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 720px; }
+  table.bench th {
+    text-align: left; font-family: var(--mono); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft);
+    padding: 12px 14px; background: var(--surface-sunken); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0;
+  }
+  table.bench td { padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  table.bench tr:last-child td { border-bottom: none; }
+  table.bench td.facet { font-weight: 500; }
+  table.bench td.mono { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px; letter-spacing: 0.02em; white-space: nowrap;
+  }
+  .pill.match { background: var(--good-soft); color: var(--good); }
+  .pill.miss { background: var(--bad-soft); color: var(--bad); }
+  .pill.gate { background: var(--neutral-soft); color: var(--neutral); }
+
+  /* hallucination cards */
+  .halluc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 4px; }
+  .halluc-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .halluc-card .facet-name { font-family: var(--mono); font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+  .halluc-card h3 { font-family: var(--display); font-size: 19px; margin: 2px 0 0; font-weight: 600; }
+  .halluc-convo { font-size: 13px; color: var(--ink-soft); font-style: italic; border-left: 2px solid var(--line); padding-left: 10px; }
+  .verdict { border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .verdict.naive { background: var(--bad-soft); }
+  .verdict.gated { background: var(--good-soft); }
+  .verdict .who { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; display: block; }
+  .verdict.naive .who { color: var(--bad); }
+  .verdict.gated .who { color: var(--good); }
+  .verdict .score { font-family: var(--mono); font-weight: 600; }
+
+  /* failure notes */
+  .failure { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 0 10px 10px 0; padding: 16px 18px; margin-top: 14px; }
+  .failure .ftag { font-family: var(--mono); font-size: 11px; color: var(--amber); text-transform: uppercase; letter-spacing: 0.06em; }
+  .failure p { margin: 8px 0 0; font-size: 14.5px; }
+  .failure .quote { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+
+  footer {
+    margin-top: 72px; padding-top: 28px; border-top: 1px solid var(--line);
+    font-size: 13.5px; color: var(--ink-soft);
+  }
+  footer code { color: var(--ink); }
+
+  @media (max-width: 640px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .flow { flex-direction: column; }
+    .flow-arrow { display: none; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Facet Scoring Baseline — AI/ML Engineer Assignment</p>
+    <h1>A scoring pipeline that knows what it doesn't know</h1>
+    <p class="dek">399 heterogeneous conversational facets, retrieved and scored in small batches against a local open-weight model — with a taxonomy gate that blocks medical, clinical, and psychometric facets from ever reaching the LLM at all.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="n">399</div><div class="label">raw facets audited</div></div>
+      <div class="stat"><div class="n">90%</div><div class="label">benchmark agreement</div></div>
+      <div class="stat"><div class="n good">0 / 20</div><div class="label">hallucinations (post-fix)</div></div>
+      <div class="stat"><div class="n">17</div><div class="label">passing unit tests</div></div>
+    </div>
+  </header>
+
+  <section id="pipeline">
+    <h2>How a conversation becomes a set of scores</h2>
+    <p class="section-note">Retrieval sees the entire facet index — including facets that can never be safely scored — so the taxonomy gate has something real to block, not a pre-filtered list.</p>
+
+    <div class="flow">
+      <div class="flow-step"><div class="k">01 preprocess</div><div class="t">Audit &amp; enrich</div><div class="d">399 rows → taxonomy, anchors, abstention rules</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="k">02 index</div><div class="t">Embed catalogue</div><div class="d">369 facets (30 header artifacts excluded)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="k">03 retrieve</div><div class="t">Top-k by similarity</div><div class="d">Full index, including non-observable facets</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="k">04 gate</div><div class="t">Taxonomy split</div><div class="d">Observable → LLM · Non-observable → auto-abstain</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="k">05 score</div><div class="t">Batched LLM calls</div><div class="d">5/batch · JSON validated independently in Python</div></div>
+    </div>
+
+    <div class="gate-note">
+      <b>The taxonomy gate is deterministic, not a prompt instruction.</b> Medical, clinical, and cognitive-testing facets are blocked in Python <em>before</em> a prompt is ever built for them — a stochastic model being told "please don't hallucinate" is never the only safeguard.
+    </div>
+  </section>
+
+  <section id="audit">
+    <h2>Facet audit: what 399 rows actually contained</h2>
+    <p class="section-note">Classified deterministically via regex/keyword rules (<code>src/taxonomy.py</code>) — reproducible byte-for-byte, no manual labeling, no LLM in the loop.</p>
+
+    <table class="taxo-table">
+      <tr><td class="taxo-name">personality_trait_or_disposition</td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill" style="width:100%"></div></div></td><td class="taxo-count">258</td></tr>
+      <tr><td class="taxo-name">spiritual_religious_practice</td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill" style="width:13.2%"></div></div></td><td class="taxo-count">34</td></tr>
+      <tr><td class="taxo-name">header_artifact <span style="color:var(--ink-soft)">(excluded)</span></td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill blocked" style="width:11.6%"></div></div></td><td class="taxo-count">30</td></tr>
+      <tr><td class="taxo-name">behavioral_frequency_count</td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill" style="width:9.7%"></div></div></td><td class="taxo-count">25</td></tr>
+      <tr><td class="taxo-name">cognitive_psychometric <span style="color:var(--ink-soft)">(gated)</span></td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill blocked" style="width:8.9%"></div></div></td><td class="taxo-count">23</td></tr>
+      <tr><td class="taxo-name">medical_biological <span style="color:var(--ink-soft)">(gated)</span></td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill blocked" style="width:5%"></div></div></td><td class="taxo-count">13</td></tr>
+      <tr><td class="taxo-name">clinical_psychological_scale <span style="color:var(--ink-soft)">(gated)</span></td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill blocked" style="width:3.5%"></div></div></td><td class="taxo-count">9</td></tr>
+      <tr><td class="taxo-name">sensitive_biographical</td><td class="taxo-bar-cell"><div class="taxo-bar-track"><div class="taxo-bar-fill" style="width:2.7%"></div></div></td><td class="taxo-count">7</td></tr>
+    </table>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--accent)"></span>conversation-observable</span>
+      <span><span class="swatch" style="background:var(--neutral)"></span>excluded / taxonomy-gated</span>
+    </div>
+  </section>
+
+  <section id="hallucinations">
+    <h2>Proving it doesn't hallucinate</h2>
+    <p class="section-note">Same three conversations, same local model (<code>qwen2.5:7b-instruct</code>). Left: a naive single-shot scorer with no abstention option. Right: this system. Live run outputs, not hypotheticals.</p>
+
+    <div class="halluc-grid">
+      <div class="halluc-card">
+        <div><span class="facet-name">FSH level</span><h3>Medical lab value</h3></div>
+        <div class="halluc-convo">"…my doctor mentioned something about my hormone levels being off, but I don't remember the exact numbers…"</div>
+        <div class="verdict naive"><span class="who">naive baseline</span><span class="score">score: 2 / 5</span> — reason admits "does not specify FSH level," scores anyway</div>
+        <div class="verdict gated"><span class="who">this system</span><span class="score">not_observable</span> — blocked before any LLM call, reason: requires_medical_lab_or_genetic_evidence</div>
+      </div>
+      <div class="halluc-card">
+        <div><span class="facet-name">Sleep Apnea</span><h3>Clinical diagnosis</h3></div>
+        <div class="halluc-convo">"…wake up gasping, partner says I snore like a chainsaw and stop breathing sometimes…"</div>
+        <div class="verdict naive"><span class="who">naive baseline</span><span class="score">score: 4 / 5</span> — pattern-matches symptoms straight to a diagnosis label</div>
+        <div class="verdict gated"><span class="who">this system</span><span class="score">not_observable</span> — symptom self-report ≠ a diagnosis; requires a sleep study</div>
+      </div>
+      <div class="halluc-card">
+        <div><span class="facet-name">Intelligence Quotient (IQ)</span><h3>Psychometric test score</h3></div>
+        <div class="halluc-convo">"…read a dense 900-page philosophy book and wrote a 20-page analysis, purely for fun…"</div>
+        <div class="verdict naive"><span class="who">naive baseline</span><span class="score">score: 4 / 5</span> — conflates "sounds smart" with a standardized test result</div>
+        <div class="verdict gated"><span class="who">this system</span><span class="score">not_observable</span> — same conversation's <code>Openness</code> legitimately scores 5/5</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="benchmark">
+    <h2>Benchmark: 20 reference judgments, 12 conversations</h2>
+    <p class="section-note">Clear · ambiguous · contradictory · quoted · sarcastic · code-switched · low-evidence. Full row-by-row detail in <code>eval/report.md</code>.</p>
+
+    <div class="table-scroll">
+      <table class="bench">
+        <thead><tr><th>Conv</th><th>Facet</th><th>Expected</th><th>System</th><th>Outcome</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">C01</td><td class="facet">Risktaking</td><td class="mono">scored (high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C01</td><td class="facet">Hesitation</td><td class="mono">scored (low)</td><td class="mono">1</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C02</td><td class="facet">Openness</td><td class="mono">scored (mid)</td><td class="mono">3</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C02</td><td class="facet">Trust in others</td><td class="mono">insufficient_evidence</td><td class="mono">—</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C03</td><td class="facet">Trust in others <span style="color:var(--ink-soft)">(contradictory)</span></td><td class="mono">insufficient_evidence</td><td class="mono">—</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C04</td><td class="facet">Risktaking <span style="color:var(--ink-soft)">(quoted)</span></td><td class="mono">scored (low)</td><td class="mono">5</td><td><span class="pill miss">wrong_score</span></td></tr>
+          <tr><td class="mono">C05</td><td class="facet">Irritability <span style="color:var(--ink-soft)">(sarcastic)</span></td><td class="mono">scored (high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C06</td><td class="facet">Irritability <span style="color:var(--ink-soft)">(code-switched)</span></td><td class="mono">scored (high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C07</td><td class="facet">Risktaking <span style="color:var(--ink-soft)">(low-evidence)</span></td><td class="mono">insufficient_evidence</td><td class="mono">not_observable</td><td><span class="pill gate">match (loose)</span></td></tr>
+          <tr><td class="mono">C07</td><td class="facet">Compassion</td><td class="mono">insufficient_evidence</td><td class="mono">—</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C07</td><td class="facet">Irritability</td><td class="mono">insufficient_evidence</td><td class="mono">—</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C08</td><td class="facet">Dhikr repetitions / day</td><td class="mono">scored (high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C08</td><td class="facet">Walking meditation freq.</td><td class="mono">scored (mid-high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C09</td><td class="facet">Caffeine intake (mg/day)</td><td class="mono">scored (mid-high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C09</td><td class="facet">Museum visits/year</td><td class="mono">scored (mid)</td><td class="mono">—</td><td><span class="pill miss">wrong_abstain</span></td></tr>
+          <tr><td class="mono">C10</td><td class="facet">FSH level <span style="color:var(--ink-soft)">(bait)</span></td><td class="mono">not_observable</td><td class="mono">not_observable</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C11</td><td class="facet">Sleep Apnea <span style="color:var(--ink-soft)">(bait)</span></td><td class="mono">not_observable</td><td class="mono">not_observable</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C12</td><td class="facet">Intelligence Quotient (IQ) <span style="color:var(--ink-soft)">(bait)</span></td><td class="mono">not_observable</td><td class="mono">not_observable</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C12</td><td class="facet">Working Memory Index <span style="color:var(--ink-soft)">(bait)</span></td><td class="mono">not_observable</td><td class="mono">not_observable</td><td><span class="pill match">match</span></td></tr>
+          <tr><td class="mono">C12</td><td class="facet">Openness <span style="color:var(--ink-soft)">(contrast)</span></td><td class="mono">scored (high)</td><td class="mono">5</td><td><span class="pill match">match</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="failure">
+      <div class="ftag">Reported, not hidden — wrong_score</div>
+      <p><b>C04, Risktaking:</b> the speaker quotes their sister saying "I never think before I act, I just leap" while describing <em>themself</em> as a heavy planner. The system scored the speaker's own Risktaking at 5/5.</p>
+      <div class="quote">model's own reason: "the sister's statement clearly indicates a high level of risktaking" — scored the wrong person's trait.</div>
+    </div>
+    <div class="failure">
+      <div class="ftag">Reported, not hidden — wrong_abstain</div>
+      <p><b>C09, Museum visits/year:</b> the model's JSON response omitted this facet entirely from its batch reply. The reconciliation layer in <code>src/score.py</code> caught the gap and produced a safe <code>insufficient_evidence</code> fallback instead of crashing or silently dropping it — the same behavior <code>tests/test_score_parsing.py</code> checks synthetically, now confirmed in a live run.</p>
+    </div>
+  </section>
+
+  <section id="fixed">
+    <h2>One hallucination, found and fixed on the record</h2>
+    <p class="section-note">The first full benchmark run wasn't 0/20 — it was 1/20. The fix attempt that failed is kept in the log next to the one that worked.</p>
+
+    <div class="failure" style="border-left-color: var(--bad)">
+      <div class="ftag" style="color:var(--bad)">Attempt 1 — verified not to work</div>
+      <p><b>C03, Trust in others:</b> "I trust people completely… actually no, I don't trust a single person anymore." Scored confidently at 1/5 (0.95 confidence) by reading only the second half of a direct contradiction. An abstract system-prompt rule ("don't resolve contradictions by recency") was added and checked narrowly on this exact case — <b>identical output.</b> The rule alone didn't change the model's behavior.</p>
+    </div>
+    <div class="failure" style="border-left-color: var(--good)">
+      <div class="ftag" style="color:var(--good)">Attempt 2 — verified working, then re-verified at full scale</div>
+      <p>Replaced the abstract rule with a concrete worked example in the prompt (wrong answer vs. right answer, spelled out). Re-checked the same case: correct <code>insufficient_evidence</code>, citing the contradiction itself. The full 12-conversation benchmark was then re-run — not just the one facet — to confirm nothing else regressed. Result: 0/20 hallucinations, 18/20 agreement, unchanged.</p>
+    </div>
+  </section>
+
+  <footer>
+    Full detail lives in the repo: <code>DECISIONS.md</code> (5 documented trade-offs) · <code>DEBUGGING.md</code> (6 real issues, symptom → fix → verification) · <code>PROMPT_LOG.md</code> (AI supervision record) · <code>eval/report.md</code> &amp; <code>eval/retrieval_ablation_report.md</code> (raw benchmark + ablation data).
+  </footer>
+
+</div>
